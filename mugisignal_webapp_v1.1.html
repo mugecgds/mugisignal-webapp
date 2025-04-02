@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>MugiSignalBot Paneli</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #eee;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #ffcc00;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      background-color: #222;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #444;
+      text-align: center;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0;
+      font-size: 16px;
+      width: 100%;
+    }
+    button {
+      background-color: #ffcc00;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #e6b800;
+    }
+    .coin-price {
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>MugiSignalBot</h1>
+  <p>Hoş geldin <span id="tg-username">Müge</span>!</p>
+
+  <h2>Canlı Coin Fiyatları (USDT)</h2>
+  <div class="coin-price">BTC/USDT: <span id="BTCUSDT">Yükleniyor...</span></div>
+  <div class="coin-price">ETH/USDT: <span id="ETHUSDT">Yükleniyor...</span></div>
+  <div class="coin-price">AVAX/USDT: <span id="AVAXUSDT">Yükleniyor...</span></div>
+  <div class="coin-price">SOL/USDT: <span id="SOLUSDT">Yükleniyor...</span></div>
+  <div class="coin-price">BNB/USDT: <span id="BNBUSDT">Yükleniyor...</span></div>
+
+  <h2>Sinyal Ekle</h2>
+  <select id="coin">
+    <option value="BTC">BTC</option>
+    <option value="ETH">ETH</option>
+    <option value="AVAX">AVAX</option>
+    <option value="SOL">SOL</option>
+    <option value="BNB">BNB</option>
+  </select>
+  <input type="text" id="entry" placeholder="Giriş Fiyatı">
+  <input type="text" id="tp" placeholder="Take Profit (TP)">
+  <input type="text" id="sl" placeholder="Stop Loss (SL)">
+  <button onclick="addSignal()">Sinyal Ekle</button>
+
+  <h2>Günlük Sinyaller</h2>
+  <table id="signal-table">
+    <tr><th>Coin</th><th>Giriş</th><th>TP</th><th>SL</th></tr>
+  </table>
+
+  <h2>Yakında Listelenecek Coinler</h2>
+  <ul id="listing-news">
+    <li>Yükleniyor...</li>
+  </ul>
+
+  <script>
+    let tg = window.Telegram.WebApp;
+    tg.ready();
+    document.getElementById("tg-username").textContent = tg.initDataUnsafe.user?.username || "Müge";
+
+    const prices = ["BTCUSDT", "ETHUSDT", "AVAXUSDT", "SOLUSDT", "BNBUSDT"];
+    const ws = new WebSocket("wss://stream.binance.com:9443/stream?streams=" + prices.map(p => p.toLowerCase() + "@ticker").join("/"));
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      const s = data.data.s;
+      const p = parseFloat(data.data.c).toFixed(2);
+      document.getElementById(s).textContent = p + " USDT";
+    };
+
+    function addSignal() {
+      const coin = document.getElementById("coin").value;
+      const entry = document.getElementById("entry").value;
+      const tp = document.getElementById("tp").value;
+      const sl = document.getElementById("sl").value;
+      const table = document.getElementById("signal-table");
+      const row = table.insertRow(-1);
+      row.innerHTML = `<td>${coin}</td><td>${entry}</td><td>${tp}</td><td>${sl}</td>`;
+      const signals = JSON.parse(localStorage.getItem("signals") || "[]");
+      signals.push({ coin, entry, tp, sl });
+      localStorage.setItem("signals", JSON.stringify(signals));
+    }
+
+    function loadSignals() {
+      const signals = JSON.parse(localStorage.getItem("signals") || "[]");
+      const table = document.getElementById("signal-table");
+      signals.forEach(({ coin, entry, tp, sl }) => {
+        const row = table.insertRow(-1);
+        row.innerHTML = `<td>${coin}</td><td>${entry}</td><td>${tp}</td><td>${sl}</td>`;
+      });
+    }
+
+    function loadCoinListings() {
+      const news = [
+        "BONK - Coinbase listelenme tarihi: 4 Nisan",
+        "ZK - Binance listelenme tarihi: 6 Nisan",
+        "JUP - Coinbase listelenme tarihi: 8 Nisan"
+      ];
+      const ul = document.getElementById("listing-news");
+      ul.innerHTML = "";
+      news.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        ul.appendChild(li);
+      });
+    }
+
+    loadSignals();
+    loadCoinListings();
+  </script>
+</body>
+</html>
